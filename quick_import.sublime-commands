@@ -1,0 +1,10 @@
+[
+  {
+    "caption": "QuickImport: Python",
+    "command": "quick_import_python"
+  },
+  {
+    "caption": "QuickImport: C++",
+    "command": "quick_import_cpp"
+  }
+]
