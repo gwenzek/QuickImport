@@ -2,18 +2,23 @@ import sublime
 import sublime_plugin
 
 import logging
+import typing
 
 from pathlib import Path
+
 logger = logging.getLogger(__file__)
 
-KNOWN_IMPORT = {
+PY_KNOWN_IMPORTS = {
     "Path": "pathlib Path",
     "np": "numpy as np",
-    "List": "typing List"
 }
 
+for typename in dir(typing):
+    if typename[0] == typename[0].upper():
+        PY_KNOWN_IMPORTS[typename] = "typing " + typename
 
-def py_full_include(include: str) -> str:
+
+def py_expand_import(include: str) -> str:
     include = include.strip()
 
     if include.startswith("import ") or include.startswith("from "):
@@ -27,8 +32,7 @@ def py_full_include(include: str) -> str:
         include, alias = include.rsplit(" as ", 1)
         alias = " as " + alias
 
-    if include in KNOWN_IMPORT:
-        include = KNOWN_IMPORT[include]
+    include = PY_KNOWN_IMPORTS.get(include, include)
 
     if "/" in include:
         included_file = Path(include)
@@ -41,38 +45,3 @@ def py_full_include(include: str) -> str:
 
     module, name = include.split(" ", 1)
     return "from {} import {}{}".format(module, name, alias)
-
-
-class IncludeInputHandler(sublime_plugin.TextInputHandler):
-    def name(self) -> str:
-        return "include"
-
-    def placeholder(self):
-        return "numpy as np"
-
-    def preview(self, text):
-        return py_full_include(text)
-
-
-class QuickImportPythonCommand(sublime_plugin.TextCommand):
-    """Add an #include statement."""
-
-    def run(self, edit: None, include: str):
-        print("calling PyImportCommand.run")
-        if not include:
-            return
-
-        view = self.view
-        last_include = view.line(view.find_all("^import")[-1])
-        view.insert(edit, last_include.end(), "\n" + py_full_include(include))
-
-    def input(self, args):
-        print("calling PyImportCommand.input({})".format(args))
-        if "include" not in args:
-            return IncludeInputHandler()
-
-    def description(self):
-        return self.__doc__
-
-    # def is_enabled(self):
-    #     return self.view.match_selector(0, "source.py")
