@@ -1,28 +1,34 @@
 import abc
+import functools
+import typing
 from pathlib import Path
-from typing import Callable, Dict, Type
+from typing import Callable, Dict, Optional, Type
 
 import sublime
 import sublime_plugin
 
-from . import importers
+if typing.TYPE_CHECKING:
+    import importers
+else:
+    from . import importers
 
 
 class QuickImportCommand(sublime_plugin.TextCommand):
     """Add an import statement at the top of the file"""
 
-    def run(self, edit: None, include: str):
-        importer = resolve_importer(self.view)
-
-        if not include:
+    def run(self, edit: sublime.Edit, include: str) -> None:
+        importer = self.resolve_importer()
+        if not importer or not include:
             return
 
         insertion_point = importer.insertion_point(self.view)
         include = importer.expand(include)
         self.view.insert(edit, insertion_point, include + "\n")
 
-    def input(self, args):
-        importer = resolve_importer(self.view)
+    def input(self, args: dict) -> Optional[QuickImportInputHandler]:
+        importer = self.resolve_importer()
+        if importer is None:
+            return None
         selection = self.view.sel()[0]
         selected_text = "" if selection.empty() else self.view.substr(selection)
         return QuickImportInputHandler(importer, selected_text)
@@ -30,13 +36,18 @@ class QuickImportCommand(sublime_plugin.TextCommand):
     def description(self):
         return self.__doc__
 
-    def is_enabled(self):
-        language = resolve_language(self.view)
-        return language in IMPORTER_REGISTRIES
+    def is_enabled(self) -> bool:
+        return self.resolve_importer() is not None
+
+    @functools.lru_cache()
+    def resolve_importer(self) -> Optional[importers.Importer]:
+        syntax = Path(self.view.settings().get("syntax"))
+        language = syntax.stem.lower()
+        return importers.resolve_importer(language)
 
 
 class QuickImportInputHandler(sublime_plugin.TextInputHandler):
-    def __init__(self, importer: Importer, selected_text: str):
+    def __init__(self, importer: importers.Importer, selected_text: str):
         self.importer = importer
         self.selected_text = selected_text
 
@@ -53,6 +64,5 @@ class QuickImportInputHandler(sublime_plugin.TextInputHandler):
         return self.selected_text
 
 
-def resolve_language(view: sublime.View):
-    syntax = Path(view.settings().get("syntax"))
-    return syntax.stem.lower()
+def plugin_loaded() -> None:
+    print("[QuickImport] Loaded QuickImport for", importers.supported_languages())

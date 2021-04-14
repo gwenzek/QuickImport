@@ -1,6 +1,6 @@
 import abc
 import typing
-from typing import Callable, Dict, Type
+from typing import Callable, Dict, Optional, Sequence, Type
 
 if typing.TYPE_CHECKING:
     import sublime
@@ -37,7 +37,10 @@ IMPORTER_REGISTRY: Dict[str, Importer] = {}
 
 
 def register(language: str) -> Callable[[Type[Importer]], Type[Importer]]:
-    """Register an Importer class to the language."""
+    """Register an Importer implementation for a language.
+
+    The language name must match the one used by Sublime Text.
+    """
     language = language.lower()
 
     def _register(cls: Type[Importer]) -> Type[Importer]:
@@ -50,9 +53,10 @@ def register(language: str) -> Callable[[Type[Importer]], Type[Importer]]:
     return _register
 
 
-def resolve_importer(language: str) -> Importer:
+def resolve_importer(language: str) -> Optional[Importer]:
     language = language.lower()
-    assert (
-        language in IMPORTER_REGISTRY
-    ), f"Unknown language {language!r}, chose from {IMPORTER_REGISTRY.keys()}"
-    return IMPORTER_REGISTRY[language]
+    return IMPORTER_REGISTRY.get(language)
+
+
+def supported_languages() -> Sequence[str]:
+    return list(IMPORTER_REGISTRY.keys())
