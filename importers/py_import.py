@@ -2,44 +2,7 @@ import os
 import typing
 from typing import Dict
 
-PY_KNOWN_IMPORTS = {
-    "Path": "pathlib Path",
-    "np": "numpy as np",
-    "pd": "pandas as pd",
-}
-
-for typename in dir(typing):
-    if typename[0] == typename[0].upper():
-        PY_KNOWN_IMPORTS[typename] = "typing " + typename
-
-
-def py_expand_import(include: str) -> str:
-    include = include.strip()
-
-    if include.startswith("import ") or include.startswith("from "):
-        # allow user to bailout by typing the full line themselves
-        return include
-
-    # Do resolution first in case it contains an alias.
-    include = PY_KNOWN_IMPORTS.get(include, include)
-    alias = ""
-    if " as " in include:
-        # TODO: do string splitting
-        include, alias = include.rsplit(" as ", 1)
-        alias = " as " + alias
-
-    # Try resolution again now that we have stripped alias.
-    include = PY_KNOWN_IMPORTS.get(include, include)
-
-    if os.sep in include:
-        include, ext = include.rsplit(os.extsep, 1)
-        include = include.replace(os.sep, ".")
-
-    if " " not in include:
-        return "import " + include + alias
-
-    module, name = include.split(" ", 1)
-    return f"from {module} import {name}{alias}"
+from . import importers
 
 
 def py_samples() -> Dict[str, str]:
@@ -70,3 +33,55 @@ def py_samples() -> Dict[str, str]:
 def test_py_expand_samples() -> None:
     for base, expanded in py_samples().items():
         assert expanded == py_expand_import(base)
+
+
+PY_KNOWN_IMPORTS = {
+    "Path": "pathlib Path",
+    "np": "numpy as np",
+    "pd": "pandas as pd",
+}
+
+for typename in dir(typing):
+    if typename[0] == typename[0].upper():
+        PY_KNOWN_IMPORTS[typename] = "typing " + typename
+
+
+def py_expand_import(include: str) -> str:
+    include = include.strip()
+
+    if include.startswith("import ") or include.startswith("from "):
+        # allow user to bailout by typing the full line themselves
+        return include
+
+    # Do resolution first in case it contains an alias.
+    include = PY_KNOWN_IMPORTS.get(include, include)
+    alias = ""
+    if " as " in include:
+        include, alias = include.rsplit(" as ", 1)
+        alias = " as " + alias
+
+    # Try resolution again now that we have stripped alias.
+    include = PY_KNOWN_IMPORTS.get(include, include)
+
+    if os.sep in include:
+        # TODO: compare path to the root folder ?
+        include, ext = include.rsplit(os.extsep, 1)
+        include = include.replace(os.sep, ".")
+
+    if " " not in include:
+        return "import " + include + alias
+
+    module, name = include.split(" ", 1)
+    return f"from {module} import {name}{alias}"
+
+
+@importers.register("Python")
+class PythonImporter(importers.Importer):
+    def insertion_regex(self) -> str:
+        return "^import "
+
+    def placeholder(self) -> str:
+        return "numpy as np"
+
+    def expand(self, include: str) -> str:
+        return py_expand_import(include)
