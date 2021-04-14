@@ -22,6 +22,8 @@ def cpp_samples() -> Dict[str, str]:
         # bailout:
         "<vector.h>": "#include <vector.h>",
         '"vector"': '#include "vector"',
+        # TODO: bailout with fix
+        # "<vector.h": "#include <vector.h>",
     }
 
 
