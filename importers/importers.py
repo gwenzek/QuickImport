@@ -1,3 +1,4 @@
+from __future__ import annotations
 import abc
 import typing
 from typing import Callable, Dict, Optional, Sequence, Type
@@ -25,7 +26,7 @@ class Importer(abc.ABC):
         """
         ...
 
-    def insertion_point(self, view: "sublime.View") -> int:
+    def insertion_point(self, view: sublime.View) -> int:
         """Where to insert the import."""
         includes = view.find_all(self.insertion_regex())
         if len(includes) > 0:
