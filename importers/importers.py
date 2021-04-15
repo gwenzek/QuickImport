@@ -29,9 +29,9 @@ class Importer(abc.ABC):
     def insertion_point(self, view: sublime.View) -> int:
         """Where to insert the import."""
         includes = view.find_all(self.insertion_regex())
-        if len(includes) > 0:
-            return view.line(includes[-1]).end() + 1
-        return 0
+        if not includes:
+            return 0
+        return view.line(includes[-1]).end() + 1
 
 
 IMPORTER_REGISTRY: Dict[str, Importer] = {}
