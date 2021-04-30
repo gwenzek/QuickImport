@@ -5,7 +5,9 @@ to make it easier to import
 Python modules
 or C++ headers.
 
-## Stay focus
+[Screencast](https://user-images.githubusercontent.com/5920036/116666564-6259a800-a99b-11eb-8d16-4f5647951edf.mp4)
+
+## Stay focused
 
 This plugin comes with a single command,
 `quick_import`
