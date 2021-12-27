@@ -33,6 +33,8 @@ No magic is going on,
 no automatic detection of availables modules/header.
 Just you and your fingers.
 
+TODO: should we provide completion for importing local files ?
+
 ## Installation
 
 Not on PackageControl yet.

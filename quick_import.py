@@ -13,6 +13,24 @@ else:
     from . import importers
 
 
+class QuickImportInputHandler(sublime_plugin.TextInputHandler):
+    def __init__(self, importer: importers.Importer, selected_text: str):
+        self.importer = importer
+        self.selected_text = selected_text
+
+    def name(self) -> str:
+        return "include"
+
+    def placeholder(self) -> str:
+        return self.importer.placeholder()
+
+    def preview(self, text: str) -> str:
+        return self.importer.expand(text)
+
+    def initial_text(self) -> str:
+        return self.selected_text
+
+
 class QuickImportCommand(sublime_plugin.TextCommand):
     """Add an import statement at the top of the file"""
 
@@ -44,24 +62,6 @@ class QuickImportCommand(sublime_plugin.TextCommand):
         syntax = Path(self.view.settings().get("syntax"))
         language = syntax.stem.lower()
         return importers.resolve_importer(language)
-
-
-class QuickImportInputHandler(sublime_plugin.TextInputHandler):
-    def __init__(self, importer: importers.Importer, selected_text: str):
-        self.importer = importer
-        self.selected_text = selected_text
-
-    def name(self) -> str:
-        return "include"
-
-    def placeholder(self) -> str:
-        return self.importer.placeholder()
-
-    def preview(self, text: str) -> str:
-        return self.importer.expand(text)
-
-    def initial_text(self) -> str:
-        return self.selected_text
 
 
 def plugin_loaded() -> None:

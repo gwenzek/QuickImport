@@ -23,6 +23,7 @@ class Importer(abc.ABC):
         """The import will be inserted where this regex is found in the file.
 
         We assumes that the imports will be sorted by another tool.
+        Modules are free to override `insertion_point` to do something smarter
         """
         ...
 
