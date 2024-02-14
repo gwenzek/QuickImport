@@ -7,6 +7,7 @@ KNOWN_PACKAGES = {"std", "builtin"}
 
 
 def get_name(include: str):
+    include = include.rsplit("/", 1)[-1]
     return include.split(".")[0]
 
 
@@ -16,7 +17,7 @@ def zig_expand_import(include: str) -> str:
     if not include:
         return '@import("");'
 
-    if "=" in include:
+    if "=" in include or "@" in include:
         # bailout, the user want to type everything themselves
         return include
 
@@ -24,21 +25,42 @@ def zig_expand_import(include: str) -> str:
     if include.endswith(".zig"):
         return f'const {name} = @import("{include}");'
 
+    if " " in include:
+        # the user wants to combine import and field access:
+        # const Foo = @import("foo.zig").Foo;
+        base, suffix = include.rsplit(" ", 1)
+        return f"const {suffix} = {zig_import(base)}.{suffix};"
+
     if "." in include:
         base, suffix = include.rsplit(".", 1)
-        # If the user has started typing ".zig", complete it for them
-        if "zig".startswith(suffix):
-            return f'const {name} = @import("{base}.zig");'
+        if "zig".startswith(suffix) or base == ".":
+            # don't mistake .zig suffix and ../ prefix for submodule alias
+            pass
+        else:
+            # If the user is trying to alias a submodule: "std.testing"
+            return f"const {suffix} = {include};"
 
-        # If the user is trying to alias a submodule: "std.testing"
-        return f"const {suffix} = {include};"
+    return f"const {name} = {zig_import(include)};"
 
-    # Don't add .zig to the standard packages
-    # Also tries to detect the build option package.
+
+def zig_import(include: str) -> str:
+    """Complete .zig suffix when needed.
+
+    Don't add .zig to std package or build option package.
+    """
     if include in KNOWN_PACKAGES or include.endswith("_options"):
-        return f'const {name} = @import("{include}");'
-
-    return f'const {name} = @import("{include}.zig");'
+        return f'@import("{include}")'
+    elif "." in include:
+        base, suffix = include.rsplit(".", 1)
+        if "zig".startswith(suffix):
+            # Complete .zig suffix
+            return f'@import("{base}.zig")'
+        elif include.startswith("../"):
+            # Relative import
+            return f'@import("{include}.zig")'
+        return f'@import("{include}")'
+    else:
+        return f'@import("{include}.zig")'
 
 
 @importers.register("Zig")
@@ -58,6 +80,7 @@ ZIG_SAMPLES = {
     "std": 'const std = @import("std");',
     "builtin": 'const builtin = @import("builtin");',
     "module.zig": 'const module = @import("module.zig");',
+    "../module": 'const module = @import("../module.zig");',
     # alias a module from std
     "std.testing": "const testing = std.testing;",
     # completes ".zig":
@@ -67,6 +90,11 @@ ZIG_SAMPLES = {
     "module.zi": 'const module = @import("module.zig");',
     # bailout:
     "const a =": "const a =",
+    "@imp": "@imp",
+    # import and access
+    "module Clz": 'const Clz = @import("module.zig").Clz;',
+    "../module Clz": 'const Clz = @import("../module.zig").Clz;',
+    "../module.z Clz": 'const Clz = @import("../module.zig").Clz;',
 }
 
 
